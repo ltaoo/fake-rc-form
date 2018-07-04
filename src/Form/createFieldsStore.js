@@ -106,12 +106,16 @@ class FieldsStore {
     return this.fieldsMeta[name];
   }
 
+  /**
+   *
+   */
   getValueFromFields(name, fields) {
     const field = fields[name];
     if (field && "value" in field) {
       return field.value;
     }
     const fieldMeta = this.getFieldMeta(name);
+    console.log("fieldMeta", fieldMeta);
     return fieldMeta && fieldMeta.initialValue;
   }
 
@@ -233,6 +237,9 @@ class FieldsStore {
    */
   getFieldValue = name => {
     const { fields } = this;
+    /**
+     * fullName => this.getValueFromFields 是 getter，实际会调用该方法去获取值
+     */
     return this.getNestedField(name, fullName =>
       this.getValueFromFields(fullName, fields)
     );

@@ -8,10 +8,7 @@ import "./styles.css";
 class App extends React.Component {
   submit = () => {
     const { getFieldsValue } = this.props.form;
-    //     getFieldsValue(["name"], (err, values) => {
-    //       console.log(err, values);
-    //     });
-    const values = getFieldsValue();
+    const values = getFieldsValue(["username"]);
     console.log(values);
   };
   render() {
@@ -22,12 +19,7 @@ class App extends React.Component {
       <div className="App">
         <h1>Hello CodeSandbox</h1>
         <h2>Start editing to see some magic happen!</h2>
-        <input
-          {...getFieldProps("name", {
-            onChange() {}, // have to write original onChange here if you need
-            rules: [{ required: true }]
-          })}
-        />
+        <input {...getFieldProps("username")} />
         <button onClick={this.submit}>submit</button>
       </div>
     );
