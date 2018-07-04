@@ -1,6 +1,9 @@
 import createBaseForm from "./createBaseForm";
 
 export const mixin = {
+  /**
+   * 会被添加到组件属性上的方法，BaseForm 会通过该方法给 WrappedComponent 添加 getFieldsValue 等方法
+   */
   getForm() {
     return {
       getFieldsValue: this.fieldsStore.getFieldsValue,

@@ -6,6 +6,9 @@ function partOf(a, b) {
   return b.indexOf(a) === 0 && [".", "["].indexOf(b[a.length]) !== -1;
 }
 
+/**
+ * store 类
+ */
 class FieldsStore {
   constructor(fields) {
     this.fields = this.flattenFields(fields);
@@ -93,7 +96,11 @@ class FieldsStore {
   setFieldMeta(name, meta) {
     this.fieldsMeta[name] = meta;
   }
-
+  /**
+   * 获取字段元信息
+   * @param {string} name - 字段名
+   * @return {Meta}
+   */
   getFieldMeta(name) {
     this.fieldsMeta[name] = this.fieldsMeta[name] || {};
     return this.fieldsMeta[name];
@@ -181,11 +188,20 @@ class FieldsStore {
     return this.getField(name)[member];
   }
 
+  /**
+   * 获取指定字段的值
+   * @param {string[]} names
+   * @param {Function} getter - 获取值的函数
+   */
   getNestedFields(names, getter) {
     const fields = names || this.getValidFieldsName();
+    // 所有实际会调用 this.getFieldValue(name) 去获取值
     return fields.reduce((acc, f) => set(acc, f, getter(f)), {});
   }
 
+  /**
+   * 获取单个字段的值
+   */
   getNestedField(name, getter) {
     const fullNames = this.getValidFieldsFullName(name);
     if (
@@ -203,10 +219,18 @@ class FieldsStore {
     );
   }
 
+  /**
+   * 获取所有字段的值
+   * @param {string[]} names - 字段名
+   */
   getFieldsValue = names => {
-    return this.getNestedFields(names, this.getFieldValue);
+    const values = this.getNestedFields(names, this.getFieldValue);
+    return values;
   };
-
+  /**
+   * 获取单个字段的值
+   * @param {string} name - 字段名
+   */
   getFieldValue = name => {
     const { fields } = this;
     return this.getNestedField(name, fullName =>

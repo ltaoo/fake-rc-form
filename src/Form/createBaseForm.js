@@ -2,8 +2,8 @@ import React from "react";
 import createReactClass from "create-react-class";
 // import Asyncvalidator from "async-validator";
 import warning from "warning";
-// import get from "lodash/get";
-// import set from "lodash/set";
+import get from "lodash/get";
+import set from "lodash/set";
 
 import createFieldsStore from "./createFieldsStore";
 import {
@@ -33,18 +33,23 @@ function createBaseForm(options = {}, mixins = []) {
     formPropName = "form",
     withRef
   } = options;
-
+  /**
+   * 包装表单组件
+   * @param {Component} WrappedComponent - 表单组件
+   */
   return function decorate(WrappedComponent) {
     const Form = createReactClass({
       mixins,
 
       getInitialState() {
         const fields = mapPropsToFields && mapPropsToFields(this.props);
+        // 用来管理 field 的 store
         this.fieldsStore = createFieldsStore(fields || {});
-
+        // 所有实例
         this.instances = {};
         this.cacheBind = {};
         this.clearedFieldMetaCache = {};
+        // 依次调用
         [
           "getFieldsValue",
           "getFieldValue",
@@ -71,10 +76,14 @@ function createBaseForm(options = {}, mixins = []) {
           this.fieldsStore.updateFields(mapPropsToFields(nextProps));
         }
       },
-
+      /**
+       * 收集数据
+       */
       onCollectCommon(name, action, args) {
         const fieldMeta = this.fieldsStore.getFieldMeta(name);
-        if (fieldMeta(action)) {
+        console.log(fieldMeta, action);
+        // 判断事件是否存在
+        if (fieldMeta[action]) {
           fieldMeta[action](...args);
         } else if (fieldMeta.originalProps && fieldMeta.originalProps[action]) {
           fieldMeta.originalProps[action](...args);
@@ -122,20 +131,25 @@ function createBaseForm(options = {}, mixins = []) {
           [name]: newField
         });
       },
-
+      /**
+       * 当输入后，会进行校验
+       * @param {string} name_ - 字段名
+       * @param {string} action - 事件名
+       */
       onCollectValidate(name_, action, ...args) {
+        console.log("134", name_, action, args);
         const { field, fieldMeta } = this.onCollectCommon(name_, action, args);
         const newField = {
           ...field,
           dirty: true
         };
 
-        this.validateFieldsInternal([newField], {
-          action,
-          options: {
-            firstFields: !!fieldMeta.validateFirst
-          }
-        });
+        //         this.validateFieldsInternal([newField], {
+        //           action,
+        //           options: {
+        //             firstFields: !!fieldMeta.validateFirst
+        //           }
+        //         });
       },
 
       getCacheBind(name, action, fn) {
@@ -181,7 +195,9 @@ function createBaseForm(options = {}, mixins = []) {
           });
         };
       },
-
+      /**
+       * 初始化 Field，即声明了一个字段，并配置该字段 name、options
+       */
       getFieldProps(name, usersFieldOption = {}) {
         if (!name) {
           throw new Error("Must call `getFieldProps` with valid name string");
@@ -223,7 +239,7 @@ function createBaseForm(options = {}, mixins = []) {
         );
         const validateTriggers = getValidateTriggers(validateRules);
         // 校验触发器，遍历
-        validateTrigger.forEach(action => {
+        validateTriggers.forEach(action => {
           if (inputProps[action]) {
             return;
           }
@@ -364,6 +380,7 @@ function createBaseForm(options = {}, mixins = []) {
       render() {
         const { wrappedComponentRef, ...restProps } = this.props;
         const formProps = {
+          // 表单属性名，默认是 form
           [formPropName]: this.getForm()
         };
         if (withRef) {
@@ -374,6 +391,7 @@ function createBaseForm(options = {}, mixins = []) {
           ...formProps,
           ...restProps
         });
+        // 最终传给被包装组件的属性，就是 form: {...}
         return <WrappedComponent {...props} />;
       }
     });
