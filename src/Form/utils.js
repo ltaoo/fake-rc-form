@@ -75,6 +75,9 @@ export function flattenFields(maybeNestedFields, isLeafNode, errorMessage) {
   return fields;
 }
 
+/**
+ * 获取校验规则
+ */
 export function normalizeValidateRules(validate, rules, validateTrigger) {
   const validateRules = validate.map(item => {
     const newItem = {

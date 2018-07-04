@@ -12,6 +12,7 @@ function partOf(a, b) {
 class FieldsStore {
   constructor(fields) {
     this.fields = this.flattenFields(fields);
+    // console.log("fields init", fields, this.fields);
     this.fieldsMeta = {};
   }
 
@@ -50,6 +51,7 @@ class FieldsStore {
   };
 
   setFields(fields) {
+    // console.log("set fields", fields);
     const fieldsMeta = this.fieldsMeta;
     const nowFields = {
       ...this.fields,
@@ -107,15 +109,15 @@ class FieldsStore {
   }
 
   /**
-   *
+   * 最终获取 field 值的地方
    */
   getValueFromFields(name, fields) {
     const field = fields[name];
+    // console.log(name, field, fields);
     if (field && "value" in field) {
       return field.value;
     }
     const fieldMeta = this.getFieldMeta(name);
-    console.log("fieldMeta", fieldMeta);
     return fieldMeta && fieldMeta.initialValue;
   }
 
@@ -212,6 +214,7 @@ class FieldsStore {
       fullNames.length === 0 || // Not registered
       (fullNames.length === 1 && fullNames[0] === name) // Name already is full name.
     ) {
+      // console.log("get value by getter", name);
       return getter(name);
     }
     const isArrayValue = fullNames[0][name.length] === "[";
@@ -229,6 +232,7 @@ class FieldsStore {
    */
   getFieldsValue = names => {
     const values = this.getNestedFields(names, this.getFieldValue);
+    // console.log("get fields value", values);
     return values;
   };
   /**
@@ -240,9 +244,11 @@ class FieldsStore {
     /**
      * fullName => this.getValueFromFields 是 getter，实际会调用该方法去获取值
      */
-    return this.getNestedField(name, fullName =>
+    const value = this.getNestedField(name, fullName =>
       this.getValueFromFields(fullName, fields)
     );
+    // console.log("single field value", value);
+    return value;
   };
 
   getFieldsError = names => {

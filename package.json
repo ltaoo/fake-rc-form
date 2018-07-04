@@ -5,9 +5,11 @@
   "keywords": [],
   "main": "src/index.js",
   "dependencies": {
+    "async-validator": "1.8.2",
     "create-react-class": "15.6.3",
     "hoist-non-react-statics": "2.5.5",
     "lodash": "4.17.10",
+    "rc-form": "2.2.0",
     "react": "16.3.2",
     "react-dom": "16.3.2",
     "react-scripts": "1.1.4",

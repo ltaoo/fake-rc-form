@@ -1,6 +1,6 @@
 import React from "react";
 import createReactClass from "create-react-class";
-// import Asyncvalidator from "async-validator";
+import Asyncvalidator from "async-validator";
 import warning from "warning";
 import get from "lodash/get";
 import set from "lodash/set";
@@ -81,7 +81,7 @@ function createBaseForm(options = {}, mixins = []) {
        */
       onCollectCommon(name, action, args) {
         const fieldMeta = this.fieldsStore.getFieldMeta(name);
-        console.log(fieldMeta, action);
+        // console.log(fieldMeta, action);
         // 判断事件是否存在
         if (fieldMeta[action]) {
           fieldMeta[action](...args);
@@ -137,7 +137,7 @@ function createBaseForm(options = {}, mixins = []) {
        * @param {string} action - 事件名
        */
       onCollectValidate(name_, action, ...args) {
-        console.log("134", name_, action, args);
+        // console.log("134", name_, action, args);
         const { field, fieldMeta } = this.onCollectCommon(name_, action, args);
         const newField = {
           ...field,
@@ -231,12 +231,12 @@ function createBaseForm(options = {}, mixins = []) {
         if (fieldNameProp) {
           inputProps[fieldNameProp] = name;
         }
-
         const validateRules = normalizeValidateRules(
           validate,
           rules,
           validateTrigger
         );
+        debugger;
         const validateTriggers = getValidateTriggers(validateRules);
         // 校验触发器，遍历
         validateTriggers.forEach(action => {
@@ -279,10 +279,13 @@ function createBaseForm(options = {}, mixins = []) {
 
       getRules(fieldMeta, action) {
         // 获取到可执行的 rules
-        const actionRules = fieldMeta.validate.filter(item => {
-          // action 存在，并且 action 属于 trigger 的元素
-          return !action || item.trigger.indexOf(action) >= 0;
-        });
+        const actionRules = fieldMeta.validate
+          .filter(item => {
+            // action 存在，并且 action 属于 trigger 的元素
+            return !action || item.trigger.indexOf(action) >= 0;
+          })
+          .map(item => item.rules);
+        console.log(fieldMeta.validate, actionRules);
         return flattenArray(actionRules);
       },
       /**
@@ -357,6 +360,167 @@ function createBaseForm(options = {}, mixins = []) {
           return;
         }
         // todo
+      },
+      /**
+       * 当字段存在 rules 时，通过该方法进行校验
+       */
+      validateFieldsInternal(
+        fields,
+        { fieldNames, action, options = {} },
+        callback
+      ) {
+        const allRules = {};
+        const allValues = {};
+        const allFields = {};
+        const alreadyErrors = {};
+        fields.forEach(field => {
+          const name = field.name;
+          // 如果没有配置强制校验，并且该字段 dirty 是 false，表示不需要校验？就不校验了
+          if (options.force !== true && field.dirty === false) {
+            if (field.errors) {
+              set(alreadyErrors, name, { errors: field.errors });
+            }
+            return;
+          }
+          const fieldMeta = this.fieldsStore.getFieldMeta(name);
+          const newField = {
+            ...field
+          };
+          newField.errors = undefined;
+          newField.validating = true;
+          newField.dirty = true;
+          allRules[name] = this.getRules(fieldMeta, action);
+          // 这里有什么意义？下面又覆盖了
+          allValues[name] = newField.value;
+          allFields[name] = newField;
+        });
+        this.setFields(allFields);
+        Object.keys(allValues).forEach(f => {
+          allValues[f] = this.fieldsStore.getFieldValue(f);
+        });
+        console.log("all fields is empty", isEmptyObject(allFields));
+        if (callback && isEmptyObject(allFields)) {
+          callback(
+            isEmptyObject(alreadyErrors) ? null : alreadyErrors,
+            this.fieldsStore.getFieldsValue(fieldNames)
+          );
+          return;
+        }
+        const validator = new Asyncvalidator(allRules);
+        if (validateMessages) {
+          // 设置错误提示
+          validator.messages(validateMessages);
+        }
+        console.log("real rules is", allRules, allValues);
+        validator.validate(allValues, options, errors => {
+          console.log("validate by Validator", errors);
+          const errorsGroup = {
+            ...alreadyErrors
+          };
+          if (errors && errors.length) {
+            errors.forEach(e => {
+              const fieldName = e.field;
+              const field = get(errorsGroup, fieldName);
+              if (typeof field !== "object" || Array.isArray(field)) {
+                set(errorsGroup, fieldName, { errors: [] });
+              }
+              const fieldErrors = get(errorsGroup, fieldName.concat(".errors"));
+              fieldErrors.push(e);
+            });
+          }
+          const expired = [];
+          const nowAllFields = {};
+          Object.keys(allRules).forEach(name => {
+            const fieldErrors = get(errorsGroup, name);
+            const nowField = this.fieldsStore.getField(name);
+            // 避免 concurrency 问题？
+            if (nowField.value !== allValues[name]) {
+              // 过期了
+              expired.push({
+                name
+              });
+            } else {
+              nowField.errors = fieldErrors && fieldErrors.errors;
+              nowField.value = allValues[name];
+              nowField.validating = false;
+              nowField.dirty = false;
+              nowAllFields[name] = nowField;
+            }
+          });
+          // 重新设置 fields ?
+          this.setFields(nowAllFields);
+          if (callback) {
+            // 存在过期的字段
+            if (expired.length) {
+              expired.forEach(({ name }) => {
+                const fieldErrors = [
+                  {
+                    message: `${name} need to revalidate`,
+                    field: name
+                  }
+                ];
+                set(errorsGroup, name, {
+                  expired: true,
+                  errors: fieldErrors
+                });
+              });
+            }
+            // console.log(errorsGroup);
+            callback(
+              isEmptyObject(errorsGroup) ? null : errorsGroup,
+              this.fieldsStore.getFieldsValue(fieldNames)
+            );
+          }
+        });
+      },
+      /**
+       * 校验字段
+       * @param {string[]} ns - 字段名
+       * @param {Option} opt
+       * @param {Function} cb
+       */
+      validateFields(ns, opt, cb) {
+        // 因为传的参数顺序不一定是 ns、opt、cb 这样，所以通过 getParams 处理，可以算「适配器」模式？
+        const { names, callback, options } = getParams(ns, opt, cb);
+        // console.log("validating", names, callback, options);
+        const fieldNames = names
+          ? this.fieldsStore.getValidFieldsFullName(names)
+          : this.fieldsStore.getValidFieldsName();
+        // 获取到有配置 rules 的字段
+        const fields = fieldNames
+          .filter(name => {
+            const fieldMeta = this.fieldsStore.getFieldMeta(name);
+            return hasRules(fieldMeta.validate);
+          })
+          .map(name => {
+            const field = this.fieldsStore.getField(name);
+            field.value = this.fieldsStore.getFieldValue(name);
+            return field;
+          });
+        // 如果没有任何字段配置了rules 字段
+        if (!fields.length) {
+          if (callback) {
+            callback(null, this.fieldsStore.getFieldsValue(fieldNames));
+          }
+          return;
+        }
+        // 如果 firstFields 不在 options 配置中，就找出 fields 中配置了 firstFields 的字段
+        if (!("firstFields" in options)) {
+          options.firstFields = fieldNames.filter(name => {
+            const fieldMeta = this.fieldsStore.getFieldMeta(name);
+            return !!fieldMeta.validateFirst;
+          });
+        }
+        // console.log("507", fieldNames, options, fields, callback);
+        // 如果有配置 rules，就交给 validateFieldsInternal 处理
+        this.validateFieldsInternal(
+          fields,
+          {
+            fieldNames,
+            options
+          },
+          callback
+        );
       },
 
       isSubmitting() {
