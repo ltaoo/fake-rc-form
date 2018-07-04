@@ -1,0 +1,23 @@
+{
+  "name": "react-compnent-form-learn",
+  "version": "1.0.0",
+  "description": "深入 form 组件",
+  "keywords": [],
+  "main": "src/index.js",
+  "dependencies": {
+    "create-react-class": "15.6.3",
+    "hoist-non-react-statics": "2.5.5",
+    "lodash": "4.17.10",
+    "react": "16.3.2",
+    "react-dom": "16.3.2",
+    "react-scripts": "1.1.4",
+    "warning": "4.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
